@@ -1,0 +1,50 @@
+*** Example of Dialect with XOR over MQTT
+
+sload ../modf-static
+sload ../protocols/mqtt
+
+*** XOR lingo using the built-in operation for natural numbers and with knowledge of mqtt
+fmod XOR-LINGO-NAT-MQTT is
+    protecting NAT .
+    protecting CONVERSION .
+    protecting RANDOM .
+    protecting MQTT-CMD{Nat} . *** This is D1
+
+    vars N A : Nat . 
+    vars CHANNEL VALUE : String .
+
+    op f : Nat Nat -> Nat .
+    eq f(publish(CHANNEL, VALUE), A) = publish(CHANNEL, string((rat(VALUE, 10) xor A), 10)) .
+    eq f(N, A) = N [owise] .
+    op g : Nat Nat -> Nat .
+    eq g(publish(CHANNEL, VALUE), A) = publish(CHANNEL, string((rat(VALUE, 10) xor A), 10)) .
+    eq g(N, A) = N [owise] .
+
+    *** Parameter definition
+    op param : Nat -> Nat .
+    eq param(N) = (random(N) rem 1000) .
+endfm
+
+*** View to instantiate XOR over a trivial data type as a lingo
+view xor-seq-lingo from PMLINGO to XOR-LINGO-NAT-MQTT is
+    sort D1 to Nat .
+    sort D2 to Nat .
+    sort A to Nat .
+
+    *** f & g are already set by the target module so the identity map is applied
+
+    *** param is already declared by the Lingo
+
+    op ingressArity to term 1 .
+    op egressArity to term 1 .
+endv
+
+*** Dialect with XOR and MQTT for the Natural numbers
+omod MAIN is 
+    protecting DIALECT{xor-seq-lingo, MqttProtocol{Nat}} .
+endom
+
+*** DIALECT(XOR,MQTT) for two clients (c1 & c2) and one broker (b)
+frew    newDialect(newMqttClient('c1,'b,subscribe("temp"))) 
+        newDialect(newMqttBroker('b)) 
+        newDialect(newMqttClient('c2,'b,publish("temp","34"))) .

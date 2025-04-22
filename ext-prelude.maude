@@ -1,0 +1,195 @@
+*** Extension of Maude's prelude for the Protocol Dialects framework
+
+view NzNat from TRIV to NAT is
+    sort Elt to NzNat .
+endv
+
+*** Theory extending the natural numbers with a constant
+fth NzNATn is
+    protecting NAT .
+    op n : -> NzNat [pconst] .
+endfth
+
+***
+*** Views of natural numbers to NzNATn
+***
+
+view 1 from NzNATn to NAT is
+    op n to term 1 .
+endv
+
+view 2 from NzNATn to NAT is
+    op n to term 2 .
+endv
+
+view 3 from NzNATn to NAT is
+    op n to term 3 .
+endv
+
+view 4 from NzNATn to NAT is
+    op n to term 4 .
+endv
+
+view 5 from NzNATn to NAT is
+    op n to term 5 .
+endv
+
+view 6 from NzNATn to NAT is
+    op n to term 6 .
+endv
+
+view 7 from NzNATn to NAT is
+    op n to term 6 .
+endv
+
+view 8 from NzNATn to NAT is
+    op n to term 8 .
+endv
+
+*** Theory extending lists of NzNat with a constant list
+fth LIST-WEIGHTS is
+    pr LIST{NzNat} * (op nil to nilW,
+                      op __ to _<;>_,
+                      op append to appendW,
+                      op tail to tailW,
+                      op front to frontW,
+                      op reverse to reverseW,
+                      op $reverse to $reverseW) .
+
+    op [n] : -> List{NzNat} [pconst] .
+endfth
+
+view 1; from LIST-WEIGHTS to LIST{NzNat} * (op nil to nilW,
+                                           op __ to _<;>_,
+                                           op append to appendW,
+                                           op tail to tailW,
+                                           op front to frontW,
+                                           op reverse to reverseW,
+                                           op $reverse to $reverseW) is
+    op [n] to term 1 .
+endv
+
+view 1;1 from LIST-WEIGHTS to LIST{NzNat} * (op nil to nilW,
+                                           op __ to _<;>_,
+                                           op append to appendW,
+                                           op tail to tailW,
+                                           op front to frontW,
+                                           op reverse to reverseW,
+                                           op $reverse to $reverseW) is
+    op [n] to term (1 <;> 1) .
+endv
+
+view 1;5 from LIST-WEIGHTS to LIST{NzNat} * (op nil to nilW,
+                                           op __ to _<;>_,
+                                           op append to appendW,
+                                           op tail to tailW,
+                                           op front to frontW,
+                                           op reverse to reverseW,
+                                           op $reverse to $reverseW) is
+    op [n] to term (1 <;> 5) .
+endv
+
+view 5;1 from LIST-WEIGHTS to LIST{NzNat} * (op nil to nilW,
+                                           op __ to _<;>_,
+                                           op append to appendW,
+                                           op tail to tailW,
+                                           op front to frontW,
+                                           op reverse to reverseW,
+                                           op $reverse to $reverseW) is
+    op [n] to term (5 <;> 1) .
+endv
+
+view Msg from TRIV to CONFIGURATION is
+    sort Elt to Msg .
+endv
+
+view Oid from TRIV to CONFIGURATION is
+    sort Elt to Oid .
+endv
+
+view Configuration from TRIV to CONFIGURATION is
+    sort Elt to Configuration .
+endv
+
+fmod MAYBE{X :: TRIV} is
+    sort Maybe{X} .
+    subsort X$Elt < Maybe{X} .
+    op nothing : -> Maybe{X} [ctor] .
+endfm
+
+fmod PAIR{X :: TRIV, Y :: TRIV} is
+    sort Pair{X,Y} .
+    op [_,_] : X$Elt Y$Elt -> Pair{X,Y} [ctor] .
+
+    var X : X$Elt . var Y : Y$Elt .
+
+    op first : Pair{X,Y} -> X$Elt .
+    eq first([X, Y]) = X .
+
+    op second : Pair{X,Y} -> Y$Elt .
+    eq second([X, Y]) = Y .
+endfm
+
+view Pair{X :: TRIV, Y :: TRIV} from TRIV to PAIR{X, Y} is
+    sort Elt to Pair{X, Y} .
+endv
+
+fmod TRIPLET{X :: TRIV, Y :: TRIV, Z :: TRIV} is
+    sort Triplet{X,Y,Z} .
+    op [_,_,_] : X$Elt Y$Elt Z$Elt -> Triplet{X,Y,Z} .
+
+    var X : X$Elt . var Y : Y$Elt . var Z : Z$Elt .
+
+    op first : Triplet{X,Y,Z} -> X$Elt .
+    eq first([X, Y, Z]) = X .
+
+    op second : Triplet{X,Y,Z} -> Y$Elt .
+    eq second([X, Y, Z]) = Y .
+
+    op third : Triplet{X,Y,Z} -> Z$Elt .
+    eq third([X, Y, Z]) = Z .
+endfm
+
+view Triplet{X :: TRIV, Y :: TRIV, Z :: TRIV} from TRIV to TRIPLET{X, Y, Z} is
+    sort Elt to Triplet{X, Y, Z} .
+endv
+
+fmod QID-EXT is
+    protecting QID .
+
+    *** Concatenation operation to form new Qids from other Qids
+    op _;_ : Qid Qid -> Qid [ctor assoc] . 
+endfm
+
+*** Heterogeneus list
+fmod HET-LIST is 
+    protecting CONVERSION . 
+
+    sort List . 
+    op nil : -> List . 
+    op __ : Universal List -> List [ctor poly (1)] . 
+endfm
+
+*** View from DEFAULT to QID
+view QidD from DEFAULT to QID is
+    sort Elt to Qid .
+    op 0 to term 'id .
+endv
+
+fmod EXT-LIST{X :: TRIV} is
+    protecting LIST{X} .
+    
+    var N : NzNat .
+    var L : NeList{X} .  
+
+    *** Function to select an element based on position
+    op select : Nat NeList{X} -> X$Elt .
+    eq select(s(N), L) = select(N, tail(L)) .
+    eq select(1, L) = head(L) .
+endfm
+
+*** Interface for protocols
+oth PROTOCOL is
+    sort Payload .
+    msg to_from_:_ : Oid Oid Payload -> Msg .
+endoth

@@ -1,0 +1,145 @@
+sload ../modf-static
+
+fmod BYTE is
+    protecting BIT-VEC{8} * (sort BitVec{8} to Byte) .
+endfm
+
+reduce in BYTE : [3] xor [5] .
+reduce in BYTE : [1000] xor [1] .
+
+*** Example 2: Bit Vectors of size N with the xor operation as the XOR LINGO
+view xorl{N :: NzNATn} from LINGO to BIT-VEC{N} is
+    sort D1 to BitVec{N} .
+    sort D2 to BitVec{N} .
+    sort A to BitVec{N} .
+    op f to _xor_ .
+    op g to _xor_ .
+endv
+
+fmod XOR-L{N :: NzNATn} is
+    protecting IDLINGO{xorl{N}} .
+endfm
+
+*** The view 8 is specified in file ext-prelude.maude
+fmod BYTE-LINGO is
+    protecting XOR-L{8} * (sort BitVec{8} to Byte) .
+endfm
+
+red f'([3],[5]) .
+red g'([3],[5]) .
+
+*** Example 3: Natural numbers with the xor operation as the XOR LINGO
+view xor-seq-l from LINGO to NAT is
+    sort D1 to Nat .
+    sort D2 to Nat .
+    sort A to Nat .
+    op f to _xor_ .
+    op g to _xor_ .
+endv
+
+fmod XOR-BSEQ-LINGO is
+    protecting IDLINGO{xor-seq-l} .
+endfm
+
+red f'(3,5) .
+red g'(6,5) .
+
+sload ../lingos/xor-lingo
+
+*** View Qid is defined in the prelude of Maude
+fmod XOR-QID is 
+    protecting XOR-SET{Qid} . 
+endfm
+
+*** Should obtain the same results from both reduces
+red ('a xor 'b xor 'c xor 'd) xor ('c xor 'd xor 'e xor 'f) .
+red 'b xor 'c xor 'b xor 'b xor 'd .
+
+*** The xor lingo as symmetric difference on sets of QIDs 
+*** Module XOR-SET{D} can be found in file lingos/xor-lingo.maude
+view xorlingo{D :: TRIV} from LINGO to XOR-SET{D} is
+    sort D1 to Set .
+    sort D2 to Set .
+    sort A to Set .
+    op f to _xor_ .
+    op g to _xor_ .
+endv
+
+fmod LINGO-XOR{D :: TRIV} is
+    protecting IDLINGO{xorlingo{D}} .
+endfm
+
+fmod QID-LINGO is
+    protecting LINGO-XOR{Qid} .
+endfm
+
+red f'('a xor 'b xor 'c xor 'd, 'c xor 'd xor 'e xor 'f) .
+red g'('a xor 'b xor 'c xor 'd, 'c xor 'd xor 'e xor 'f) .
+
+*** Example 4: Pairs of natural numbers as the D&C lingo
+fmod NAT-PAIR is
+    protecting NAT .
+    sort NatPair .
+    op [_,_] : Nat Nat -> NatPair [ctor] .
+    ops p1 p2 : NatPair -> Nat .
+    vars n m : Nat .
+    eq p1([n,m]) = n .
+    eq p2([n,m]) = m .
+endfm
+
+view D&C-ling from LINGO to NAT-PAIR is
+    sort D1 to Nat .
+    sort D2 to NatPair .
+    sort A to Nat .
+    var n : D1 . var P : D2 . var a : A .
+    op f(n,a) to term 
+    [(n + (a + 2)) quo (a + 2),
+    (n + (a + 2)) rem (a + 2)] .
+    op g(P,a) to term 
+    sd(((p1(P) * (a + 2)) + p2(P)),(a + 2))  .
+endv
+
+fmod D&C-LINGO is
+    protecting IDLINGO{D&C-ling} .
+endfm
+
+red f'(13,3) .
+red g'([3,3],3) .
+red g'(f'(13,3),3) .
+
+*** Extended Bit Vector type with a function param
+fmod XOR-BV-LINGO{N :: NzNATn} is
+    protecting BIT-VEC{N} .
+
+    *** Parameter function to compute the elements of A
+    op param : Nat -> BitVec{N} .
+endfm
+
+view xorpml{N :: NzNATn} from PMLINGO to XOR-BV-LINGO{N} is
+    sort D1 to BitVec{N} .
+    sort D2 to BitVec{N} .
+    sort A to BitVec{N} .
+    op f to _xor_ .
+    op g to _xor_ .
+
+    op ingressArity to term 1 .
+    op egressArity to term 1 .
+endv
+
+*** Example 6: f-Checkable version of XOR lingo using LINGO# parametric transformation
+fmod XOR-LINGO#{N :: NzNATn} is
+    protecting LINGO#{xorpml{N}} .
+endfm
+
+fmod BYTE-LINGO# is
+    protecting XOR-LINGO#{8} * (sort BitVec{8} to Byte) .
+endfm
+
+red f#([3], a[[5], [7]]) .
+red g#(f#([3], a[[5], [7]]), a[[5], [7]]) .
+
+*** For the examples in Example 12 see the following files:
+*** sin-xorNat-mqtt.maude
+*** sin-xor-mqtt.maude
+*** sin-dilingo'-mqtt-biased.maude
+*** sin-xor&dc-mqtt.maude

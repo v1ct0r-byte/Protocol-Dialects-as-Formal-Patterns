@@ -1,0 +1,55 @@
+*** Example of horizontal compositon:
+*** Dialect with lingo resulting of an horizontal compoition of XOR and D&C over MQTT, dice is biased
+
+sload ../modf-static
+sload ../protocols/mqtt
+sload ../lingos/xor-lingo
+sload ../lingos/d&c-lingo
+
+*** Dilingo composed of an xor lingo and a d&c lingo
+fmod XOR&DC-LINGO-BIT-VEC{N :: NzNATn} is
+    protecting XOR-LINGO{BitVec{N}} * (op param to param1) .
+    protecting D&C-LINGO-BIT-VEC{N} * (op param to param2) .
+
+    *** We need to put keep the relation D21 D22 < D2 from DILINGO for the view
+    subsort Pair{BitVec{N},BitVec{N}} < BitVec{N} .
+endfm
+
+view xor&dc-lingo-BitVec{N :: NzNATn} from W-DILINGO to XOR&DC-LINGO-BIT-VEC{N} is
+    sort D1 to BitVec{N} .
+    sort D2 to BitVec{N} .
+    sort D21 to BitVec{N} .
+    sort D22 to Pair{BitVec{N}, BitVec{N}} .
+    
+    *** Mapping that preserves sort relations
+    sort A to Nat .
+    sort A1 to BitVec{N} .
+    sort A2 to BitVec{N} .
+
+    *** param1 (& param2) mapping is the identity
+
+    op f1 to _xor_ .
+    op g1 to _xor_ .
+    op f2 to div .
+    op g2 to check .
+
+    op ingressArity to term 1 .
+    op egressArity to term 1 .
+
+    op w1 to term 1 .
+    op w2 to term 5 .
+endv
+
+omod MAIN is
+    protecting RANDOM .
+    protecting DIALECT{DHOR-COMP{xor&dc-lingo-BitVec{8}}, MqttProtocol{BitVec{8}}} .
+    
+    var N : Nat .
+    *** Parameter for first lingo
+    eq param1(N) = [random(N) rem (2 ^ 8)] .
+endom
+
+*** DIALECT(2XOR,MQTT) test
+frew    newDialect(newMqttClient('c1,'b,subscribe("temp"))) 
+        newDialect(newMqttBroker('b)) 
+        newDialect(newMqttClient('c2,'b,publish("temp","34"))) .

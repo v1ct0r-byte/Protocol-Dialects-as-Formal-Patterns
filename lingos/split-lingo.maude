@@ -1,0 +1,133 @@
+*** Specification of the Split lingo
+
+sload ../data-types
+
+***(fth SPLIT is
+    sorts Vector Input .
+
+    op split : Input -> Vector .
+    op merge : Vector -> Input .
+
+    *** Requirements
+
+    *** If N divides M without leaving remaining then the result is of sort List{NatN{M}}
+    cmb split(D:NatN{N}) : List{NatN{M}} if (N$n rem M$*) == 0 [nonexec] .
+    *** The merge of a split always returns the original type
+    mb merge(split(D:NatN{N})) : NatN{N} [nonexec] .
+endfth)
+
+***( Split using decimal division
+fmod SPLIT{N :: NzNATn, M :: NzNATn} is
+    pr NATN{N} .
+    pr NATN{M} .
+    pr LIST{NatN{M}} .
+
+    op split : NatN{N} -> List{NatN{M}} .
+    op merge : List{NatN{M}} -> NatN{N} .
+
+    var D : NatN{N} .
+    var R : NatN{M} .
+    var num : Nat .
+    var L : List{NatN{M}} .
+
+    *** Should be defined over NatN to only allow well formed inputs
+    ceq split([num]) = split([num quo (10 ^ M$*)]) [num rem (10 ^ M$*)]
+        if num >= (10 ^ M$*) .
+    eq split([num]) = [num] [owise] .
+
+    eq merge([num] L) = [(num * (10 ^ (M$* * size(L))))] + merge(L) . 
+    eq merge(nil) = [0] .
+
+    *** Link with lists    
+endfm)
+
+*** Split in an abstract way over some trivial data type D
+fmod SPLIT{D :: TRIV} is
+    including PAYLOAD-BASE .
+    pr LIST{D} * (op __ to _|p_) .
+
+    subsort D$Elt < Payload .
+
+    op _splt_ : Nat D$Elt -> D$Elt .
+
+    op split : D$Elt Nat -> List{D} .
+    op merge : List{D} Nat -> D$Elt .
+
+    var M : D$Elt .
+    var L : List{D} .
+    var N : Nat .
+
+    eq split(M, s(N)) = (split(M, N) |p (s(N) splt M)) .
+    eq split(M, 0) = nilP .
+    ceq merge(L |p (s(N) splt M), s(N)) = merge(L, N) if N =/= 0 .
+    *** We could generalize it to automatically return the message from a non empty list whatever the current count is
+    *** For now, we simulate a normal merging by going one by one till there is only the original whole left
+    eq merge(((1 splt M)), 1) = M .
+endfm
+
+*** Split lingo
+fmod SPLIT-LINGO{D :: TRIV} is
+    pr SPLIT{D} .
+
+    var N : Nat .
+    
+    *** Function to compute the parameter for f and g
+    op param : Nat -> Nat .
+    eq param(N) = 2 .
+endfm
+
+***( Split in an abstract way over messages
+mod SPLIT-LINGO{D :: TRIV} is
+    pr NAT .
+    pr QID .
+
+    *** Construction to abstractly represent the fragment of some payload
+    op _;_ : D$Elt Nat -> D$Elt .
+
+    var P : D$Elt .
+    var N : Nat .
+    vars O O' : Oid .
+    var C : Configuration .
+
+    op f' : Qid Msg Nat -> Configuration .
+    eq f'('split, (from O to O' : P), s(N)) = (from O to O' : (P;s(N))) f'('split, (from O to O' : P), N) .
+    eq f'('split, (from O to O' : P), 0) = (from O to O' : (P;0)) .
+    op g' : Qid Configuration Nat -> Msg .
+    eq g'('split, (from O to O' : (P;s(N))) C, s(N)) = g'('split, C, N) .
+    eq g'('split, (from O to O' : (P;1)) C, 0) = (from O to O' : P) .
+endm)
+
+***( [WIP] Split over vectors of things (most general case)
+fmod SPLITV{D :: TRIV, N :: NzNATn, M :: NzNATn} is
+    pr VECTOR{D,N} .
+    pr VECTOR{D,M} .
+    pr LIST{Vector{D,M}} .
+
+    op split : Vector{D,N} -> List{Vector{D,M}} .
+    op merge : List{Vector{D,M}} -> Vector{D,N} .
+
+    eq split
+endfm)
+
+*** [WIP] Split using binary division
+***(fmod SPLIT{N :: NzNATn, M :: NzNATn} is
+    pr BIT-VECTOR{N} .
+    pr BIT-VECTOR{M} .
+    pr LIST{BVect{M}} .
+
+    op split : BVect{N} -> List{BVect{M}} .
+    op merge : List{BVect{M}} -> BVect{N} .
+
+    var VN : BVect{N} .
+    var L : List{BVect{M}} .
+
+    ---eq split(VN) = 
+endfm)
+
+eof
+
+mod MAIN is
+    ---protecting SPLIT{4,2} .
+    ---protecting SPLIT{Nat} .
+    protecting SPLIT-LINGO{Nat} .
+endm

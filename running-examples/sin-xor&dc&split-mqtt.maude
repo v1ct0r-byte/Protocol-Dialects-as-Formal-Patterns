@@ -1,0 +1,81 @@
+*** Example functional composition:
+*** Dialect with lingo result of XOR, D&C and SPLIT over MQTT
+
+sload ../modf-static
+sload ../protocols/mqtt
+sload ../lingos/xor-lingo
+sload ../lingos/d&c-lingo
+sload ../lingos/split-lingo
+
+*** Lingo D&C and Lingo SPLIT
+fmod DC+SPLIT-LINGO-BIT-VEC{N :: NzNATn} is
+    protecting D&C-LINGO-BIT-VEC{N} * (op param to param') .
+    protecting SPLIT-LINGO{Pair{BitVec{N},BitVec{N}}} * (op param to param'') .
+endfm
+
+view dc+split-lingo-BitVec{N :: NzNATn} from COMP-LINGOS to DC+SPLIT-LINGO-BIT-VEC{N} is 
+    sort D1 to BitVec{N} .
+    sort D2 to Pair{BitVec{N},BitVec{N}} .
+    sort D3 to List{Pair{BitVec{N},BitVec{N}}} .
+    sort A to BitVec{N} .
+    sort A' to Nat .
+
+    op f to div .
+    op f' to split .
+
+    op g to check .
+    op g' to merge .
+
+    op param to param' .
+    op param' to param'' .
+
+    op ingressArity to term 1 .
+    op egressArity to term 2 .
+endv
+
+*** Lingo XOR with functionally composed Lingo DC+SPLIT
+fmod XOR+DC+SPLIT-LINGO-BIT-VEC{N :: NzNATn} is
+    protecting XOR-LINGO{BitVec{N}} .
+    protecting FUN-COMP{dc+split-lingo-BitVec{N}} * (   op f.f' to f'.f'',
+                                                        op g*g' to g'*g'', 
+                                                        op comp.comp' to comp'.comp'',
+                                                        op sens.sens' to sens'.sens'',
+                                                        op param.param' to param'.param'') .
+endfm
+
+view xor+dc+split-lingo-BitVec{N :: NzNATn} from COMP-LINGOS to XOR+DC+SPLIT-LINGO-BIT-VEC{N} is 
+    sort D1 to BitVec{N} .
+    sort D2 to BitVec{N} .
+    sort D3 to List{Pair{BitVec{N},BitVec{N}}} .
+    sort A to BitVec{N} .
+    sort A' to pairA .
+
+    op f to _xor_ .
+    op f' to f'.f'' .
+
+    op g to _xor_ .
+    op g' to g'*g'' .
+
+    op param to param .
+    op param' to param'.param'' .
+
+     op ingressArity to term 1 .
+    *** We need to hard set the multiplicity
+    op egressArity to term 2 .
+endv
+
+*** Dialect with functionally composed lingo XOR+DC+SPLIT over MATT for Bytes
+omod MAIN-BYTE is
+    protecting DIALECT{FUN-COMP{xor+dc+split-lingo-BitVec{8}}, MqttProtocol{BitVec{8}}} .
+
+    var N : Nat .
+
+    eq param(N) = [random(N) rem (2 ^ 8)] .
+    eq param'(N) = [s(random(N)) rem (2 ^ 8)] .
+    *** The parameter for SPLIT is defined by SPLIT-LINGO
+endom
+
+*** DIALECT(XOR+DC+SPLIT,MQTT) test
+frew    newDialect(newMqttClient('c1,'b,subscribe("temp"))) 
+        newDialect(newMqttBroker('b)) 
+        newDialect(newMqttClient('c2,'b,publish("temp","34"))) .

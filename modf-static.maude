@@ -1,0 +1,615 @@
+*** Protocol Dialects framework: Static Components
+
+sload ext-prelude
+sload data-types
+
+*** Interface for lingos (defines basic concepts such as Lingo identifier and functions f and g)
+fth LINGO is
+    sorts D1 D2 A .
+
+    op f : D1 A -> D2 .
+    op g : D2 A -> D1 .
+    
+    var d1 : D1 . var a : A .
+    eq g(f(d1,a),a) = d1 .
+endfth
+
+fmod IDLINGO{L :: LINGO} is
+    op f' : L$D1 L$A -> L$D2 .
+    op g' : L$D2 L$A -> L$D1 .
+    var d1 : L$D1 . var d2 : L$D2 . var a : L$A .
+    eq f'(d1,a) = f(d1,a) .
+    eq g'(d2,a) = g(d2,a) .
+endfm
+
+*** Interface for lingos with param and multiplicity functions
+fth PMLINGO is 
+    protecting NAT .
+    including LINGO .
+
+    *** Function that computes a parameter in A from a natural number (used by Dialects)
+    op param : Nat -> A .
+
+    *** Multiplicities of a lingo (input & output)
+    ops ingressArity egressArity : -> NzNat .
+endfth
+
+*** Interface for lingos that are f-Checkable
+fth FLINGO is
+    including PMLINGO .
+
+    var d2 : D2 . var a : A .
+    eq f(g(d2,a),a) = d2 .
+endfth
+
+*** Parameterized module to automatically transform any Lingo into an f-Checkable lingo
+fmod LINGO#{L :: PMLINGO} is
+    protecting INITIAL-EQUALITY-PREDICATE .
+
+    sorts APair# APair D2Pair .
+    subsort APair# < APair .
+
+    op a[_,_] : L$A L$A -> APair [ctor] .
+    op d2[_,_] : L$D2 L$D2 -> D2Pair [ctor] .
+
+    vars a a' : L$A . var d1 : L$D1 . vars d2 d2' : L$D2 .
+    cmb a[a,a'] : APair# if a .=. a' = false .
+
+    op f# : L$D1 APair# -> D2Pair .
+    eq f#(d1,a[a,a']) = d2[f(d1,a),f(d1,a')] .
+
+    op g# : D2Pair APair# -> L$D1 .
+    eq g#(d2[d2,d2'],a[a,a']) = g(d2,a) .
+
+    op param# : Nat -> APair# .
+endfm
+
+*** Theory of two functionally composable lingos
+fth COMP-LINGOS is 
+    including PMLINGO .
+    including PMLINGO * (sort D1 to D2,
+                        sort D2 to D3,
+                        sort A to A',
+                        op f to f',
+                        op g to g',
+                        op param to param') .
+endfth
+
+*** Functional composition of two functionally composable lingos
+fmod FUN-COMP{CL :: COMP-LINGOS} is
+    sort pairA .
+
+    op a[_,_] : CL$A CL$A' -> pairA [ctor] .
+
+    var d1 : CL$D1 . var d3 : CL$D3 .
+    var a : CL$A . var a' : CL$A' .
+
+    op f.f' : CL$D1 pairA -> CL$D3 .
+    eq f.f'(d1, a[a,a']) = f'(f(d1, a), a') .
+
+    op g*g' : CL$D3 pairA -> CL$D1 .
+    eq g*g'(d3, a[a,a']) = g(g'(d3, a'),a) .
+
+    var n : Nat .
+
+    op param.param' : Nat -> pairA .
+    eq param.param'(n) = a[param(n),param'(n)] .
+endfm
+
+view FUN-COMP{CL :: COMP-LINGOS} from PMLINGO to FUN-COMP{CL} is
+    sort D1 to CL$D1 .
+    sort D2 to CL$D3 .
+    sort A to pairA .
+
+    op f to f.f' .
+    op g to g*g' .
+
+    op param to param.param' .
+endv
+
+*** Adaptor theory
+fth ADAPTOR is
+    sorts D D' .
+    
+    op j : D -> D' .
+    op r : D' -> D .
+
+    *** Inverse function requirement for j and r
+    eq r(j(d:D)) = d:D .
+endfth
+
+*** Lingo with adaptor from the left theory
+fth LINGO+LADAPTOR is
+    including PMLINGO .
+    including ADAPTOR * (sort D' to D1) .
+endfth
+
+*** Parameterized module for Left Adaptors (source)
+fmod LADAPT-LINGO{LL :: LINGO+LADAPTOR} is
+    var d : LL$D .
+    var a : LL$A .
+    var d2 : LL$D2 .
+
+    op $f : LL$D LL$A -> LL$D2 .
+    eq $f(d,a) = f(j(d),a) .
+
+    op $g : LL$D2 LL$A -> LL$D .
+    eq $g(d2,a) = r(g(d2,a)) .
+
+    *** Equational property of cancellation
+    eq $g($f(d,a),a) = d .
+endfm
+
+*** View for left-adapted lingos
+view lalingo{LL :: LINGO+LADAPTOR} from PMLINGO to LADAPT-LINGO{LL} is
+    sort D1 to LL$D .
+    sort D2 to LL$D2 .
+    sort A to LL$A .
+
+    op f to $f .
+    op g to $g .
+
+    *** param is kept the same
+endv
+
+*** Lingo with adaptor from the right theory
+fth LINGO+RADAPTOR is
+    including PMLINGO .
+    including ADAPTOR * (sort D to D2) .
+endfth
+
+*** Parameterized module for Right Adaptors (output)
+fmod RADAPT-LINGO{LR :: LINGO+RADAPTOR} is
+    var d1 : LR$D1 .
+    var a : LR$A .
+    var d' : LR$D' .
+
+    op f$ : LR$D1 LR$A -> LR$D' .
+    eq f$(d1,a) = j(f(d1,a)) .
+
+    op g$ : LR$D' LR$A -> LR$D1 .
+    eq g$(d',a) = g(r(d'),a) .
+
+    *** Equational property of cancellation
+    eq g$(f$(d1,a),a) = d1 .
+endfm
+
+*** View for right-adapted lingos
+view ralingo{LR :: LINGO+RADAPTOR} from PMLINGO to RADAPT-LINGO{LR} is
+    sort D1 to LR$D1 .
+    sort D2 to LR$D' .
+    sort A to LR$A .
+
+    op f to f$ .
+    op g to g$ .
+
+    *** param is kept the same
+endv
+
+*** Interface of a DILINGO: the horizontal composition of two lingos
+fth DILINGO is
+    protecting NAT .
+    sorts D1 D21 D22 A1 A2 .
+
+    op f1 : D1 A1 -> D21 .
+    op f2 : D1 A2 -> D22 .
+
+    op g1 : D21 A1 -> D1 .
+    op g2 : D22 A2 -> D1 .
+
+    var a1 : A1 . var a2 : A2 . var d1 : D1 .
+
+    eq g1(f1(d1, a1), a1) = d1 .
+    eq g2(f2(d1, a2), a2) = d1 .
+
+    *** Arities of the composed lingo
+    ops ingressArity egressArity : -> NzNat .
+
+    *** Param function for each lingo
+    op param1 : Nat -> A1 .
+    op param2 : Nat -> A2 .
+endfth
+
+fth W-DILINGO is
+    including DILINGO .
+    
+    *** Wheights for the two lingos
+    ops w1 w2 : -> NzNat [pconst] .
+endfth
+
+*** Interface of a TRILINGO: the horizontal composition of three lingos
+fth TRILINGO is
+    including DILINGO .
+
+    sorts D23 A3 .
+
+    op f3 : D1 A3 -> D23 .
+    op g3 : D23 A3 -> D1 .
+
+    var a3 : A3 . var d1 : D1 .
+    eq g3(f3(d1, a3), a3) = d1 .
+
+    *** Param function for the third lingo
+    op param3 : Nat -> A3 .
+endfth
+
+fth W-TRILINGO is
+    including TRILINGO .
+
+    *** Weights for the three lingos
+    ops w1 w2 w3 : -> NzNat [pconst] .
+endfth
+
+*** Interface for a coin tosser function
+fth COINTOSS is
+    protecting NAT .
+    *** Operation that given a seed returns true or false
+    op toss : Nat -> Bool .
+endfth
+
+*** Intance of a coin tosser using the built in pseudo-random number generator in Maude.
+fmod FAIR-COINTOSSER is
+    protecting RANDOM .
+
+    op tossACoin : Nat -> Bool .
+
+    var N : Nat .
+
+    *** Toss a fair coin. Fair because there is a 50% chance for each side.
+    eq tossACoin(N) = if ((random(N) rem 2) == 0) then true else false fi .
+endfm
+
+*** View to instantiate the coin tosser
+view fair-coinTosser from COINTOSS to FAIR-COINTOSSER is
+    op toss to tossACoin .
+endv
+
+*** Intance of a biased coin tosser using the built in pseudo-random number generator in Maude.
+fmod BIASED-COINTOSSER{B :: NzNATn} is
+    protecting RANDOM .
+
+    op tossACoin : Nat -> Bool .
+
+    var N : Nat .
+
+    *** Toss a biased coin. Biased because the result probability changes with the custom bias received as parameter.
+    eq tossACoin(N) = if ((random(N) rem B$n) == 0) then true else false fi .
+endfm
+
+*** View to instantiate the biased coin tosser
+view biased-coinTosser{B :: NzNATn} from COINTOSS to BIASED-COINTOSSER{B} is
+    op toss to tossACoin .
+endv
+
+*** Interface for a dice
+fth DICE is
+    protecting NAT .
+    *** Operation that given a seed returns one of the sides of the dice
+    op throw : Nat -> NzNat .
+endfth
+
+*** Fair dice with F faces
+fmod FAIR-DICE-THROWER{F :: NzNATn} is
+    protecting RANDOM .
+
+    op throw : Nat -> NzNat .
+
+    var N : Nat .
+    eq throw(N) = s(random(N) rem F$n) . *** We do the successor to avoid 0
+endfm
+
+*** View to instantiate the dice thrower of F faces
+view fair-dice-thrower{F :: NzNATn} from DICE to FAIR-DICE-THROWER{F} is
+endv
+
+*** Dice with F faces and L weights
+*** F is a natural number and L is a list of Non-zero natural numbers
+*** We assume that F <= addition of all values in L
+*** We also assume that size(L) = F
+fmod WEIGHTED-DICE-THROWER{F :: NzNATn, LW :: LIST-WEIGHTS} is
+    protecting RANDOM .
+
+    vars N W SF : Nat .
+    var L : List{NzNat} .
+
+    *** Cummulative value of elemtents in a list
+    op cum : List{NzNat} -> Nat .
+    eq cum(N) = N .
+    eq cum(L) = (head(L) + cum(tailW(L))) .
+
+    *** Accumulated list
+    op acc : List{NzNat} -> List{NzNat} .
+    eq acc(L) = $acc(head(L),tailW(L)) .
+
+    *** Goes through the list of weights accummulating the values
+    op $acc : Nat List{NzNat} -> List{NzNat} .
+    eq $acc(N, nilW) = N .
+    eq $acc(N, L) = (N <;> $acc(N + head(L),tailW(L))) .
+
+    *** Simulates the action of throwing a dice of F faces and a list of F weights
+    op throw : Nat -> NzNat .
+    eq throw(N) = sel(s(random(N) rem (cum(LW$[n]))), acc(LW$[n]), 1) . *** We do the successor to avoid 0
+
+    *** Funtion to obtain the face according to the ranges provided by the list of weights
+    *** Arguments: value of the throw, Accumulated list with weights (ranges), index between 1 and F (number of faces in the dice)
+    op sel : NzNat List{NzNat} Nat -> NzNat .
+    eq sel(N, W, SF) = SF .
+    eq sel(N, L, SF) = if (N > head(L)) then (sel(N, tailW(L), s(SF))) else SF fi .
+endfm
+
+*** View to instantiate the dice thrower of F faces
+view weighted-dice-thrower{F :: NzNATn, L :: LIST-WEIGHTS} from DICE to WEIGHTED-DICE-THROWER{F, L} is
+endv
+
+*** Functional module defining a DICE that uses weights in the throw
+*** This allows us to use the weights provided to know two things:
+*** 1. The number of faces of the dice, given by the size of the list.
+*** 2. The weights corresponding to each face, provided by the elements in the list.
+fmod FDICE is
+    protecting RANDOM .
+    protecting LIST{NzNat} * (  op nil to nilW,
+                                op __ to _<;>_,
+                                op append to appendW,
+                                op head to headW,
+                                op tail to tailW,
+                                op front to frontW,
+                                op reverse to reverseW,
+                                op $reverse to $reverseW) .
+
+    vars N W SF : NzNat .
+    var L : List{NzNat} .
+
+    *** Cummulative value of all the elemtents in a list (summation)
+    op cum : List{NzNat} -> NzNat .
+    eq cum(N) = N .
+    eq cum(L) = (headW(L) + cum(tailW(L))) .
+
+    *** Funtion to obtain the face according to the ranges provided by the list of weights
+    *** Arguments: value of the throw, Accumulated list with weights (ranges), index between 1 and size(L)
+    op sel : NzNat List{NzNat} NzNat -> NzNat .
+    eq sel(N, W, SF) = SF .
+    eq sel(N, L, SF) = if (N > headW(L)) then (sel(N, tailW(L), s(SF))) else SF fi .
+
+    *** Accumulated list
+    op acc : List{NzNat} -> List{NzNat} .
+    eq acc(L) = $acc(headW(L),tailW(L)) .
+
+    *** Auxiliary function that goes through the list of weights accummulating the values
+    op $acc : Nat List{NzNat} -> List{NzNat} .
+    eq $acc(N, nilW) = N .
+    eq $acc(N, L) = (N <;> $acc(N + headW(L), tailW(L))) .
+
+    *** Throw of a dice of size(L) faces with weights L
+    op throw : Nat List{NzNat} -> NzNat [memo] .
+    eq throw(N, L) = sel(s(random(N) rem (cum(L))), acc(L), 1) .
+endfm
+
+*** Horizontal composition of a dilingo
+fmod DHOR-COMP{WD :: W-DILINGO} is
+    protecting FDICE .
+
+    sorts D2 A .
+    subsorts WD$D21 WD$D22 < D2 .
+
+    var N : Nat .
+    *** Parameter of a horizontal composition (identity function since paramX will take care)
+    op param : Nat -> Nat .
+    eq param(N) = N .
+
+    op +f : WD$D1 Nat -> D2 .
+    op +g : D2 Nat -> WD$D1 .
+
+    var d1 : WD$D1 .
+    var d2 : D2 .
+
+    *** Disambiguation
+    ceq +f(d1, N) = f1(d1, param1(N)) if throw(N, WD$w1 <;> WD$w2) == 1 .
+    ceq +f(d1, N) = f2(d1, param2(N)) if throw(N, WD$w1 <;> WD$w2) == 2 .
+
+    ceq +g(d2, N) = g1(d2, param1(N)) if throw(N, WD$w1 <;> WD$w2) == 1 .
+    ceq +g(d2, N) = g2(d2, param2(N)) if throw(N, WD$w1 <;> WD$w2) == 2 .
+endfm
+
+*** Generic view to for the horizontal composition
+view DHOR-COMP{WD :: W-DILINGO} from PMLINGO to DHOR-COMP{WD} is
+    sort D1 to WD$D1 .
+    sort D2 to D2 .
+    *** We map the argument to the Natural number used in the computation
+    sort A to Nat .
+
+    op f to +f .
+    op g to +g .
+endv
+
+*** Horizontal composition of a trilingo
+fmod THOR-COMP{WT :: W-TRILINGO} is
+    protecting FDICE .
+
+    sorts A D2 .
+    subsorts WT$D21 WT$D22 WT$D23 < D2 .
+
+    var N : Nat .
+    *** Parameter of a horizontal composition (identity function since paramX will take care)
+    op param : Nat -> Nat .
+    eq param(N) = N .
+
+    op +f : WT$D1 Nat -> D2 .
+    op +g : D2 Nat -> WT$D1 .
+
+    var d1 : WT$D1 .
+    var d2 : D2 .
+
+    *** Disambiguation case
+    ceq +f(d1, N) = f1(d1, param1(N)) if throw(N, WT$w1 <;> WT$w2 <;> WT$w3) == 1 .
+    ceq +f(d1, N) = f2(d1, param2(N)) if throw(N, WT$w1 <;> WT$w2 <;> WT$w3) == 2 .
+    ceq +f(d1, N) = f3(d1, param3(N)) if throw(N, WT$w1 <;> WT$w2 <;> WT$w3) == 3 .
+
+    ceq +g(d2, N) = g1(d2, param1(N)) if throw(N, WT$w1 <;> WT$w2 <;> WT$w3) == 1 .
+    ceq +g(d2, N) = g2(d2, param2(N)) if throw(N, WT$w1 <;> WT$w2 <;> WT$w3) == 2 .
+    ceq +g(d2, N) = g3(d2, param3(N)) if throw(N, WT$w1 <;> WT$w2 <;> WT$w3) == 3 .
+endfm
+
+*** Generic view to for the horizontal composition
+view THOR-COMP{WT :: W-TRILINGO} from PMLINGO to THOR-COMP{WT} is
+    sort D1 to WT$D1 .
+    *** We map the argument to the Natural number used in the computation
+    sort A to Nat .
+
+    op f to +f .
+    op g to +g .
+endv
+
+*** Global concept of payload for Dialects and Lingos
+fmod PAYLOAD is
+    sort Payload .
+endfm
+
+view Payload from TRIV to PAYLOAD is
+    sort Elt to Payload .
+endv
+
+*** Module to instance Payload lists
+fmod PAYLOAD-BASE is
+    protecting PAYLOAD .
+    protecting LIST{Payload} * (op __ to _|p_,
+                                op nil to nilP,
+                                op append to appendP,
+                                op tail to tailP,
+                                op front to frontP,
+                                op reverse to reverseP,
+                                op $reverse to $reverseP) .
+
+    op _;p_ : Nat Payload -> Payload [ctor] .
+endfm
+
+*** Parametrized definition of a dialect over a lingo and a protocol
+omod DIALECT{L :: PMLINGO, P :: PROTOCOL} is
+    extending PAYLOAD-BASE .
+    including RANDOM .
+    protecting EXT-BOOL .
+    protecting MAP{String, Qid} .
+    protecting MAP{Oid, Nat} .
+
+    *** Subsorts for messages from protocol and dialect meta-object
+    subsort L$D1 < Payload .
+    subsort L$D2 < Payload .
+
+    *** Class definition
+    *** conf: encapsulated protocol or dialect
+    *** in-buffer: stores the incomming messages for future processing
+    *** peer-counters: counts the lingo iteration of each participant
+    class Dialect{L,P} | conf : Configuration, in-buffer : Configuration, peer-counters : Map{Oid, Nat} .
+
+    *** Constructor
+    *** Object to be encapsulated by the Dialect meta-object
+    op newDialect : Object -> Object .
+    eq newDialect(< O:Oid : C:Cid | Atts:AttributeSet >) = 
+        < O:Oid : Dialect{L,P} | conf : < O:Oid : C:Cid | Atts:AttributeSet >, in-buffer : none, peer-counters : empty > [dnt] .
+
+    *** Message definition
+    msg to_from_:_ : Oid Oid Payload -> Msg .
+    msg to_from_:_ : Oid Oid List{Payload} -> Msg .
+
+    *** Concatenation for subtypes managed by the lingos.
+    op _;p_ : Nat L$D1 -> L$D1 [ctor] .
+    op _;p_ : Nat L$D2 -> L$D2 [ctor] .
+
+    *** Update function: updates the atribute set of the dialect so the lingos are a "moving target"
+    op update : AttributeSet Oid -> AttributeSet .
+    eq update(none, O:Oid) = none .
+
+    *** Update function definition
+    eq update((peer-counters : R:Map{Oid, Nat}, Atts:AttributeSet), O:Oid) = (peer-counters : incrementCounter(O:Oid, R:Map{Oid, Nat}), Atts:AttributeSet) .
+
+    vars O1 O2 O1' : Oid .
+    var C : Cid .
+    vars Atts Atts' : AttributeSet .
+    vars M M' : Msg . 
+    vars MSel Ms Ms' Ms'' MIn MOut : Configuration .
+    var CL : Qid .
+    var R : Map{Oid, Nat} . 
+    vars N N' : Nat .
+    var ARG : L$A .
+    var P P' : Payload .
+    var LP LP' : List{Payload} .
+
+    *** Given a message and its payload tags it accorting to the current peer-count, creating more messages if necessary
+    op processOutMsg : Nat Msg -> Configuration .
+    eq processOutMsg(N, (to O2 from O1 : (P |p LP))) = (to O2 from O1 : N ;p P) processOutMsg(N, (to O2 from O1 : LP)) .
+    eq processOutMsg(N, (to O2 from O1 : nilP)) = none .
+
+    *** Given a configuratuion and its payload it untags payloads with same tag and prepares it for processing
+    op processInMsg : Configuration -> Msg .
+    eq processInMsg((to O2 from O1 : ((N ;p P) |p LP)) (to O2 from O1 : ((N ;p P') |p LP')) Ms) = processInMsg((to O2 from O1 : P |p P' |p LP) Ms) .
+    eq processInMsg((to O2 from O1 : ((N ;p P) |p LP))) = (to O2 from O1 : (P |p LP)) .
+    eq processInMsg((to O2 from O1 : LP)) = (to O2 from O1 : (LP)) [owise] .
+
+    *** Increments a counter for an object identifier
+    op incrementCounter : Oid Map{Oid, Nat} -> Map{Oid, Nat} .
+    eq incrementCounter(O2, R) = insert(O2, s(if R[O2] == undefined then 0 else R[O2] fi), R) .
+
+    *** Auxiliary function to call f (g respectively) and process the message
+    op f' : Configuration L$A -> Configuration .
+    eq f'((to O2 from O1 : P), ARG) = (to O2 from O1 : f(P, ARG)) .
+    op g' : Configuration L$A -> Configuration .
+    eq g'((to O2 from O1 : P), ARG) = if (f(g(P, ARG), ARG) == P) then (to O2 from O1 : g(P, ARG)) else none fi .
+    eq g'(none, ARG) = none .
+
+    *** Function to check that all messages come from the same object identifier
+    op fromOid? : Configuration Oid -> Bool .
+    eq fromOid?((to O2 from O1' : LP) Ms, O1) = (O1' == O1) and-then fromOid?(Ms, O1) .
+    eq fromOid?(none, O1) = true .
+
+    *** Function to check that all messages are from the same original message
+    op fromMsgTag? : Configuration Nat -> Bool .
+    eq fromMsgTag?((to O2 from O1 : N' ;p P) Ms, N) = (N' == N) and-then fromMsgTag?(Ms, N) .
+    eq fromMsgTag?(none, N) = true .
+
+    *** Obtains the unique messages only present in the first set
+    op diff : Configuration Configuration -> Configuration .
+    eq diff(M Ms, M' Ms') = if M == M' then diff(Ms, Ms') else M diff(Ms, M' Ms') fi .
+    eq diff(Ms, Ms') = Ms [owise] .
+
+    *** Computes the number of messages in a configuration
+    op $msgCount : Configuration -> Nat .
+    eq $msgCount(M:Msg C:Configuration) = s($msgCount(C:Configuration)) .
+    eq $msgCount(C:Configuration) = 0 [owise] .
+    eq $msgCount(none) = 0 . 
+
+    *** Extracts N messages from a configuration
+    op $take : Nat Configuration -> Configuration .
+    eq $take(s(N), M Ms) = M $take(N, Ms) .
+    eq $take(0, Ms) = none .
+
+    ***
+    *** Rules of a dialect meta-object
+    ***
+
+    *** Tranform outgoing messages with corresponding lingo
+    rl [out] : < O1 : DC:Dialect{L,P} | conf : (< O1 : C | Atts > (to O2 from O1 : P) Ms), 
+                            peer-counters : R, 
+                            Atts' >
+             => < O1 : DC:Dialect{L,P} | conf : (< O1 : C | Atts > Ms), 
+                            update((peer-counters : R, Atts'), O2) >
+                processOutMsg(incrementCounter(O2,R)[O2],f'((to O2 from O1 : P), param(incrementCounter(O2,R)[O2]))) [dnt] .
+
+    *** Acumulate incoming messages in a buffer
+    rl [buff] : < O1 : Dialect{L,P} | in-buffer : Ms, Atts >
+                (to O1 from O2 : P)
+             => < O1 : Dialect{L,P} | in-buffer : (Ms (to O1 from O2 : P)), Atts > .
+
+    *** Tranform messages in the buffer with corresponding lingo
+    crl [in] : < O1 : DC:Dialect{L,P} | conf : (< O1 : C | Atts > Ms''),
+                           in-buffer : Ms,
+                           peer-counters : R,
+                           Atts' >
+            => < O1 : DC:Dialect{L,P} | conf : (< O1 : C | Atts > Ms''
+                                    g'(processInMsg(MSel), param(incrementCounter(O2,R)[O2]))) ,
+                           in-buffer : diff(Ms, MSel),
+                           update((peer-counters : R, Atts'), O2) > 
+        if  $msgCount(Ms) >= egressArity /\
+            MSel := $take(egressArity, Ms) /\
+            (to O1 from O2 : LP) Ms' := MSel /\
+            fromOid?(MSel, O2) == true /\
+            fromMsgTag?(MSel, s(if R[O2] == undefined then 0 else R[O2] fi)) == true [dnt] .
+endom

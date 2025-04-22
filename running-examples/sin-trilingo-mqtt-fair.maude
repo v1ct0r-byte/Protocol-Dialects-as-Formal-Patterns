@@ -1,0 +1,66 @@
+*** Example of horizontal composition:
+*** Dialect with a lingo result of XOR, DC and EDXOR lingos over MQTT
+
+sload ../modf-static
+sload ../protocols/mqtt
+sload ../lingos/xor-lingo
+sload ../lingos/d&c-lingo
+
+fmod XOR*DC*EDXOR-LINGO-BIT-VEC{N :: NzNATn} is
+    protecting XOR-LINGO{BitVec{N}} * (op param to param1) .
+    protecting D&C-LINGO-BIT-VEC{N} * (op param to param2) .
+    protecting XOR-ED-LINGO{BitVec{N}} * (  op f to f3,
+                                            op g to g3,
+                                            op param to param3) .
+
+    *** We need to put keep the relation D21 D22 D23 < D2 from TRILINGO for the view
+    subsort Pair{BitVec{N},BitVec{N}} < BitVec{N} .
+endfm
+
+view xor*dc*edxor-lingo-BitVec{N :: NzNATn} from W-TRILINGO to XOR*DC*EDXOR-LINGO-BIT-VEC{N} is
+    sort D1 to BitVec{N} .
+    sort D2 to BitVec{N} .
+    sort D21 to BitVec{N} .
+    sort D22 to Pair{BitVec{N},BitVec{N}} .
+    sort D23 to Pair{BitVec{N},BitVec{N}} .
+    
+    *** Mapping that preserves sort relations
+    sort A to Nat .
+    sort A1 to BitVec{N} .
+    sort A2 to BitVec{N} .
+    sort A3 to Pair{BitVec{N},BitVec{N}} .
+
+    op f1 to _xor_ .
+    op g1 to _xor_ .
+    op f2 to div .
+    op g2 to check .
+    *** f3 and g3 are provided by XOR-ED-LINGO
+
+    *** param1 (& param2 & param3) mapping is the identity
+
+    op ingressArity to term 1 .
+    op egressArity to term 1 .
+
+    op w1 to term 1 .
+    op w2 to term 1 .
+    op w3 to term 1 .
+endv
+
+omod MAIN is
+    protecting DIALECT{THOR-COMP{xor*dc*edxor-lingo-BitVec{8}}, MqttProtocol{Byte}} .
+    
+    var N : Nat .
+    *** Definition of the general parameter (identity function)
+    eq param(N) = N . 
+    *** Parameter for XOR
+    eq param1(N) = [random(N) rem (2 ^ 8)] .
+    *** Parameter for DC
+    eq param2(N) = [random(s(N)) rem (2 ^ 8)] .
+    *** Parameter for EDXOR
+    eq param3(N) = [param1(N), param2(N)] .
+endom
+
+*** DIALECT(XOR*DC*EDXOR,MQTT) test
+frew    newDialect(newMqttClient('c1,'b,subscribe("temp"))) 
+        newDialect(newMqttBroker('b)) 
+        newDialect(newMqttClient('c2,'b,publish("temp","34"))) .

@@ -1,0 +1,162 @@
+*** Data types definitions in the Protocol Dialects framework
+
+sload ext-prelude
+
+*** This module serves as a collection of diferent data-types for the framework
+
+*** Data type BIT
+fmod BIT is
+    sort Bit .
+    ops 0 1 : -> Bit [ctor] .
+endfm
+
+***
+*** Bits as elements of the TRIV theory
+***
+
+view Bit from TRIV to BIT is
+    sort Elt to Bit .
+endv
+
+*** Complex data type of a vector of D and length N
+fmod VECTOR{D :: TRIV, N :: NzNATn} is
+    pr LIST{D} .
+
+    sort Vector{D,N} .
+    ---subsort Vector{D,N} < List{D} .
+
+    *** Work around
+    sort BList{D} .
+    op [_] : List{D} -> BList{D} [ctor] .
+    subsort Vector{D,N} < BList{D} .
+
+    var E : D$Elt .
+    var L : List{D} .
+    cmb [(E L)] : Vector{D,N} 
+        if size(E L) = N$n .
+endfm
+
+***
+*** View of a concrete instance of vector of bits of length 4
+***
+
+view BitVector4 from TRIV to VECTOR{Bit, 4} is
+    sort Elt to Vector{Bit,4} .
+endv
+
+***
+*** Parameterized view of a concrete instance of a vector of n Ds
+***
+
+view Vector{D :: TRIV, N :: NzNATn} from TRIV to VECTOR{D,N} is
+    sort Elt to Vector{D,N} .
+endv
+
+*** Data type to represent vectors of bits of size N as natural numbers <= (2 ^ N)
+fmod BIT-VEC{N :: NzNATn} is 
+    protecting NAT .
+
+    sorts BitVec{N} BitStr{N} . 
+    subsort BitVec{N} < BitStr{N} .
+
+    op [_] : Nat -> BitStr{N} [ctor] .
+    var N : Nat .
+    cmb [N] : BitVec{N} if N < (2 ^ N$n) .
+
+    var M : Nat . 
+    op _xor_ : BitStr{N} BitStr{N} -> BitStr{N} [assoc comm] .
+    op _xor_ : BitVec{N} BitVec{N} -> BitVec{N} [assoc comm] .
+    eq [N] xor [M] = [N xor M] .
+    eq [0] xor BV:BitVec{N} = BV:BitVec{N} .
+
+    var NZ : NzNat .
+
+    *** Operation to divide a Bit-Vector
+    op _quo_ : BitVec{N} NzNat -> BitVec{N} .
+    eq [N] quo NZ = [N quo NZ] .
+
+    *** Operation to get the remainder
+    op _rem_ : BitVec{N} NzNat -> BitVec{N} .
+    eq [N] rem NZ = [N rem NZ] .
+
+    *** Symmetric difference over BitVec
+    op sdN : BitVec{N} BitVec{N} -> BitVec{N} [comm] .
+    eq sdN([N],[M]) = [sd(N,M)] .
+
+    *** Addition over BitVec
+    op _+BV_ : BitVec{N} BitVec{N} -> BitVec{N} [assoc comm] .
+    eq [N] +BV [M] = [N + M] .
+endfm
+
+***
+*** Views for Bit Vectors as natural numbers
+***
+
+view BitVec2 from TRIV to BIT-VEC{2} is
+    sort Elt to BitVec{2} .
+endv
+
+view BitVec4 from TRIV to BIT-VEC{4} is
+    sort Elt to BitVec{4} .
+endv
+
+view Byte from TRIV to BIT-VEC{8} is
+    sort Elt to BitVec{8} .
+endv
+
+*** General view
+view BitVec{N :: NzNATn} from TRIV to BIT-VEC{N} is
+    sort Elt to BitVec{N} .
+endv
+
+*** Natural numbers of decimal size N
+fmod NATN{N :: NzNATn} is
+    pr NAT .
+
+    sort NatN{N} .
+
+    *** Work around
+    sort BNatN .
+    op [_] : Nat -> BNatN [ctor] .
+    subsort NatN{N} < BNatN .
+
+    cmb [X:Nat] : NatN{N}
+        if X:Nat < (10 ^ N$n) .
+
+    vars N M : NzNat .
+
+    *** XOR over NatN
+    op xor : NatN{N} NatN{N} -> NatN{N} [assoc comm] .
+    op xor : BNatN BNatN -> BNatN [assoc comm] .
+    eq xor([N],[M]) = [N xor M] .
+    *** Extra equation to represent property of xor over zero
+    eq xor([0], N:NatN{N}) = N:NatN{N} .
+
+    *** Addition over NatN
+    op _+N_ : NatN{N} NatN{N} -> NatN{N} [assoc comm] .
+    eq [N] +N [M] = [N + M] .
+
+    *** Symmetric difference over NatN
+    op sdN : NatN{N} NatN{N} -> NatN{N} [comm] .
+    eq sdN([N],[M]) = [sd(N,M)] .
+endfm
+
+***
+*** Views for restricted natural numbers to be elements
+***
+
+view Nat2 from TRIV to NATN{2} is
+    sort Elt to NatN{2} .
+endv
+
+view Nat4 from TRIV to NATN{4} is
+    sort Elt to NatN{4} .
+endv
+
+***
+*** Parameterized view of a Naturan Number of decimal size n
+***
+
+view NatN{N :: NzNATn} from TRIV to NATN{N} is
+    sort Elt to NatN{N} .
+endv

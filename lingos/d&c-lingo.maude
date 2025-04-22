@@ -1,0 +1,105 @@
+*** Specification of the Divide and Check (D&C) lingo
+
+sload ../data-types
+sload ../ext-prelude
+sload ../lingos/xor-lingo
+
+*** Lingo that uses division over natural numbers of digit size N
+fmod D&C{N :: NzNATn} is
+    protecting NATN{N} .
+    protecting PAIR{NatN{N}, NatN{N}} .
+    protecting XOR{NatN{N}} .
+
+    vars DIV SEC Q R : Nat .
+    vars N M : NatN{N} .
+
+    *** Another option is to have an operator trash to encapsulate the message, so the dialect can discard them
+
+    op div : NatN{N} NatN{N} -> Pair{NatN{N},NatN{N}} .
+    eq div([DIV],[SEC]) = [[(DIV quo (SEC + 2))], ([DIV rem (SEC + 2)] xor [SEC + 2])] .
+
+    op check : Pair{NatN{N},NatN{N}} NatN{N} -> NatN{N} .
+    eq check([[Q], [R]], [SEC]) = sdN(([(Q * (SEC + 2))] +N ([R] xor [SEC + 2])), [(SEC + 2)]) .
+
+    *** Cancelation property for abstraction purposes
+    eq check(div(N, M), M) = N .
+endfm
+
+fmod D&C-LINGO{N :: NzNATn} is
+    protecting D&C{N} .
+    protecting RANDOM .
+    protecting NAT .
+
+    vars X Y : NatN{N} . var Z : Nat .
+    var P : Pair{NatN{N}, NatN{N}} .
+
+    ops ingressArity egressArity : -> Nat .
+
+    eq ingressArity = 1 .
+    eq egressArity = 1 .
+
+    *** The user defines the f & g with its corresponding identifier 
+    *** and makes sure it applies the appropiate function
+    op f : NatN{N} NatN{N} -> Pair{NatN{N}, NatN{N}} .
+    eq f(X, Y) = div(X, Y) .
+    op g : Pair{NatN{N}, NatN{N}} NatN{N} -> NatN{N} .
+    eq g(P, Y) = check(P, Y) .
+
+    op param : Nat -> NatN{N} .
+    eq param(Z) = [random(Z) rem (N$n * 10)] .
+endfm
+
+*** Lingo that uses division over Bit Vectors of size 2 ^ N
+fmod D&C-BITVEC{N :: NzNATn} is
+    protecting RANDOM .
+    protecting BIT-VEC{N} .
+    protecting PAIR{BitVec{N}, BitVec{N}} .
+
+    vars DIV SEC Q R : Nat .
+    vars N M : BitVec{N} .
+
+    *** Another option is to have an operator trash to encapsulate the message, so the dialect can discard them
+
+    op div : BitVec{N} BitVec{N} -> Pair{BitVec{N},BitVec{N}} .
+    eq div([DIV],[SEC]) = [[(DIV quo (random(SEC) + 2))], [DIV rem (random(SEC) + 2)]] .
+
+    op check : Pair{BitVec{N},BitVec{N}} BitVec{N} -> BitVec{N} .
+    eq check([[Q], [R]], [SEC]) = sdN([(Q * (random(SEC) + 2))] +BV [R], [(random(SEC) + 2)]) . 
+
+    *** Cancelation property for abstraction purposes
+    eq check(div(N, M), M) = N .
+endfm
+
+fmod D&C-LINGO-BIT-VEC{N :: NzNATn} is
+    protecting D&C-BITVEC{N} .
+    protecting NAT .
+
+    var Z : Nat .
+
+    *** Computes the parameter used for D&C
+    op param : Nat -> BitVec{N} .
+    eq param(Z) = [random(Z) rem (2 ^ N$n)] .
+endfm
+
+*** Abstract divide and check 
+fmod D&C-ABS{D :: TRIV} is
+    protecting RANDOM .
+    protecting PAIR{D,D} .
+
+    vars DIV Q R : D$Elt .
+    vars SEC SEC' : Nat .
+    var P : Pair{D,D} .
+
+    *** Constant for the dialect to process
+    op bottom : -> D$Elt .
+
+    op div : D$Elt Nat -> Pair{D,D} .
+
+    op check : Pair{D,D} Nat ~> D$Elt .
+
+    *** Cancelation property
+    eq check(div(DIV,SEC),SEC) = DIV .
+
+    *** Case secret does not match
+    ceq check(div(DIV,SEC),SEC') = bottom if SEC =/= SEC' .
+endfm

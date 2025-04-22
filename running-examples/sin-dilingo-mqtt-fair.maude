@@ -1,0 +1,54 @@
+*** Example of horizontal compositon:
+*** Dialect with lingo resulting of an horizontal compoition of XOR1 and XOR2 over MQTT, dice is fair
+*** Main difference between XOR1 and XOR2 is how the parameter is computed
+
+sload ../modf-static
+sload ../protocols/mqtt
+sload ../lingos/xor-lingo
+
+*** Dilingo composed of two xor lingos
+fmod 2XOR-DILINGO{D :: TRIV} is
+    protecting XOR-LINGO{D} * (op param to param1) .
+    protecting XOR-LINGO{D} * (op param to param2) .
+endfm
+
+view 2xor-dilingo{D :: TRIV} from W-DILINGO to 2XOR-DILINGO{D} is
+    sort D1 to D$Elt .
+    sort D2 to D$Elt .
+    sort D21 to D$Elt .
+    sort D22 to D$Elt .
+    
+    *** Mappings that preserve sort relations
+    sort A to Nat .
+    sort A1 to D$Elt .
+    sort A2 to D$Elt .
+
+    op f1 to _xor_ .
+    op g1 to _xor_ .
+    op f2 to _xor_ .
+    op g2 to _xor_ .
+
+    op ingressArity to term 1 .
+    op egressArity to term 1 .
+
+    *** param1 (& param2) mapping is the identity
+
+    op w1 to term 1 .
+    op w2 to term 1 .
+endv
+
+omod MAIN is
+    protecting RANDOM .
+    protecting DIALECT{DHOR-COMP{2xor-dilingo{Byte}}, MqttProtocol{Byte}} * (sort BitVec{8} to Byte) .
+    
+    var N : Nat .
+    *** Parameter for first lingo
+    eq param1(N) = [random(N) rem (2 ^ 8)] .
+    *** Parameter for second lingo
+    eq param2(N) = [random(s(N)) rem (2 ^ 8)] .
+endom
+
+*** DIALECT(2XOR,MQTT) test
+frew    newDialect(newMqttClient('c1,'b,subscribe("temp"))) 
+        newDialect(newMqttBroker('b)) 
+        newDialect(newMqttClient('c2,'b,publish("temp","34"))) .

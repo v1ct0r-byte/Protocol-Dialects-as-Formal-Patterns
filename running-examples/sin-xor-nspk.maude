@@ -1,0 +1,52 @@
+*** Example of Dialect with XOR over NSPK
+
+sload ../modf-static
+sload ../protocols/nspk
+sload ../lingos/xor-lingo
+
+*** XOR-LINGO
+fmod XOR-LINGO-I{D :: TRIV} is
+    protecting XOR-LINGO{D} .
+endfm
+
+*** View to instantiate XOR over a trivial data type as a lingo
+view xor-lingo{D :: TRIV} from PMLINGO to XOR-LINGO-I{D} is
+    sort D1 to D$Elt .
+    sort D2 to D$Elt .
+    sort A to D$Elt .
+
+    op f to _xor_ .
+    op g to _xor_ .
+    
+    *** param is already declared by the lingo
+
+    op ingressArity to term 1 .
+    op egressArity to term 1 .
+endv
+
+*** Dialect with XOR and NSPK over BYTE
+omod MAIN-BYTE is
+    protecting DIALECT{xor-lingo{Byte}, NspkProtocol{Byte}} * (sort BitVec{8} to Byte ) .
+
+    var N : Nat .
+    *** Definition of the parameter
+    eq param(N) = [random(N) rem (2 ^ 8)] .
+endom
+
+*** DIALECT(XOR,NSPK) test
+frew    newDialect(< 'a : NspkPrincipal | init : nothing, reply : nothing, close : nothing, initiates-with : 'b >) 
+        newDialect(< 'b : NspkPrincipal | init : nothing, reply : nothing, close : nothing, initiates-with : nobody >) .
+
+*** Dialect with XOR and NSPK over Strings
+omod MAIN-STRING is
+    protecting CONVERSION .
+    protecting DIALECT{xor-lingo{String}, NspkProtocol{String}} .
+
+    var N : Nat .
+    *** Definition of the parameter (mod 4 digits)
+    eq param(N) = string(random(N) rem 10000, 10) .
+endom
+
+*** DIALECT(XOR,NSPK) test
+frew    newDialect(< 'a : NspkPrincipal | init : nothing, reply : nothing, close : nothing, initiates-with : 'b >) 
+        newDialect(< 'b : NspkPrincipal | init : nothing, reply : nothing, close : nothing, initiates-with : nobody >) .

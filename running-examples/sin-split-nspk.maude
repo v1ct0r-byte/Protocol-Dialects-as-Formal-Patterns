@@ -1,0 +1,29 @@
+*** Example of Dialect with Split lingo over NSPK
+
+sload ../modf-static
+sload ../protocols/nspk
+sload ../lingos/split-lingo
+
+*** View to instantiate SPLIT over a generic data type as a lingo
+view split-lingo{D :: TRIV} from PMLINGO to SPLIT-LINGO{D} is
+    sort D1 to D$Elt .
+    sort D2 to List{D} .
+    sort A to Nat .
+
+    op f to split .
+    op g to merge .
+    
+    *** param is declared by SPLIT-LINGO
+
+    op ingressArity to term 1 .
+    op egressArity to term 2 .
+endv
+
+*** Dialect with SPLIT and NSPK
+omod MAIN is
+    protecting DIALECT{split-lingo{Byte}, NspkProtocol{Byte}} * (sort BitVec{8} to Byte) .
+endom
+
+*** DIALECT(SPLIT,NSPK) test
+frew    newDialect(< 'a : NspkPrincipal | init : nothing, reply : nothing, close : nothing, initiates-with : 'b >) 
+        newDialect(< 'b : NspkPrincipal | init : nothing, reply : nothing, close : nothing, initiates-with : nobody >) .

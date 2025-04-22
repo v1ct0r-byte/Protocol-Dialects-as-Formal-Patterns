@@ -1,0 +1,82 @@
+*** Specification of the NSPK protocol
+
+sload ../ext-prelude
+
+fmod ASYM-KEYS{ID :: TRIV} is
+    sorts SecretKey{ID} PublicKey{ID} Key{ID} .
+    subsort SecretKey{ID} PublicKey{ID} < Key{ID} .
+    op sk : ID$Elt -> SecretKey{ID} [ctor] .
+    op pk : ID$Elt -> PublicKey{ID} [ctor] .
+endfm
+
+fmod ASYM-ENCRYPTION{DATA :: TRIV, ID :: TRIV} is
+    protecting ASYM-KEYS{ID} .
+
+    sort Encrypted{DATA,ID} . 
+    --- Subsort relation so encrypted data can be used as payload because it is of the same Data Type
+    subsort Encrypted{DATA,ID} < DATA$Elt .
+    op enc : PublicKey{ID} DATA$Elt -> Encrypted{DATA, ID} [ctor] .
+    op dec : SecretKey{ID} Encrypted{DATA, ID} -> DATA$Elt .
+
+    var D : DATA$Elt . var Id : ID$Elt .
+
+    eq dec(sk(Id), enc(pk(Id), D)) = D .
+endfm
+
+omod NSPK{D :: TRIV} is
+    protecting ASYM-ENCRYPTION{D, Oid} .
+    protecting MAYBE{D} * (sort Maybe{D} to D?) .
+    protecting MAYBE{Oid} * (sort Maybe{Oid} to Oid?, op nothing to nobody) .
+    protecting QID .
+
+    sort Payload .
+    subsort D$Elt < Payload .
+
+    *** We set all Qids to be Oids
+    subsort Qid < Oid .
+
+    *** Message definition
+    msg to_from_:_ : Oid Oid Payload -> Msg .
+
+    subsort Oid < Payload .
+    ops r r' : -> D$Elt [ctor] .
+    op conc : Oid D$Elt -> D$Elt [ctor] .
+    op conc : D$Elt D$Elt -> D$Elt [ctor] .
+
+    class NspkPrincipal | init : D?, reply : D?, close : D?, initiates-with : Oid? . 
+
+    vars A B : Oid . vars R R' : D$Elt .
+
+    rl [nspk/initiator-inits] : 
+        < A : NspkPrincipal | init : nothing, initiates-with : B >
+    =>  < A : NspkPrincipal | init : enc(pk(B), conc(A,r)) >
+        (to B from A : enc(pk(B), conc(A,r))) .
+
+    rl [nspk/responder-replies] :
+        < B : NspkPrincipal | init : nothing >
+        (to B from A : enc(pk(B), conc(A,R)))
+    =>  < B : NspkPrincipal | init : enc(pk(B), conc(A,R)), 
+                              reply : enc(pk(A), conc(R, r')) >
+        (to A from B : enc(pk(A), conc(R, r'))) .
+
+    rl [nspk/initiator-closes] :
+        < A : NspkPrincipal | init : enc(pk(B), conc(A,R)) >
+        (to A from B : enc(pk(A), conc(R, R')))
+    =>  < A : NspkPrincipal | init : enc(pk(B), conc(A,R)), 
+                              reply : enc(pk(A), conc(R, R')),
+                              close : enc(pk(B), R') >
+        (to B from A : enc(pk(B), R')) .
+
+    rl [nspk/responder-concludes] :
+        < B : NspkPrincipal | init : enc(pk(B), conc(A,R)), 
+                              reply : enc(pk(A), conc(R, R')) >
+        (to B from A : enc(pk(B), R'))
+    =>  < B : NspkPrincipal | init : enc(pk(B), conc(A,R)), 
+                              reply : enc(pk(A), conc(R, R')),
+                              close : enc(pk(B), R') > .
+endom
+
+*** Interpretation of the NSPK protocol over some data-type
+view NspkProtocol{D :: TRIV} from PROTOCOL to NSPK{D} is
+    sort Payload to D$Elt .
+endv

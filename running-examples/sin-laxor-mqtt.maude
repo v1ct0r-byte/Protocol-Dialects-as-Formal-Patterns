@@ -1,0 +1,72 @@
+*** Example of Dialect with a lingo that has been adapted on the left
+*** The original lingo is over Strings, the protocol works with Bytes
+*** The adaptor extends the lingo to be over Natural Numbers and yiled Strings
+
+sload ../modf-static
+sload ../protocols/mqtt
+sload ../lingos/xor-lingo
+
+*** XOR-LINGO over Byte with a left adaptor for Strings
+fmod XOR-LINGO+LADAPTOR-STRING is
+    protecting XOR-LINGO{String} .
+    *** Input data will be the Byte
+    protecting BIT-VEC{8} * (sort BitVec{8} to Byte) .
+
+    *** Adaptor is the built-in conversion
+    protecting CONVERSION .
+
+    var n : Byte . var s : String .
+
+    *** Operator that returns the decapsulated natural number
+    op nat : Byte -> Nat .
+    *** Operator that returns the encapsulated natural number
+    op byte : Nat -> Byte .
+    eq byte(m:Nat) = [(m:Nat rem (2 ^ 8))] . *** Might not be needed
+
+    *** The j function will be the conversion of Decimal numbers to Strings
+    op j : Byte -> String .
+    eq j(n) = string(nat(n), 10) [nonexec] . *** It is left non executable because it returns kind when given payload it can not trasnform
+
+    *** The r function will be the conversion of Strings to Decimal numbers
+    op r : String -> Byte .
+    eq r(s) = byte(rat(s, 10)) [nonexec] . *** It is left non executable because it returns kind when given payload it can not trasnform
+    
+    *** Property from the Adaptor theory
+    eq r(j(n)) = n .
+endfm
+
+*** View to instantiate XOR with left adaptor
+view xor+lstring from LINGO+LADAPTOR to XOR-LINGO+LADAPTOR-STRING is
+    *** PMLINGO mappings
+    sort D1 to String .
+    sort D2 to String .
+    sort A to String .
+
+    op f to _xor_ .
+    op g to _xor_ .
+    
+    *** param is already declared by the lingo
+
+    op ingressArity to term 1 .
+    op egressArity to term 1 .
+
+    *** LADAPTOR mappings
+    sort D to Byte .
+
+    *** j & r are the identity mapping since tarjet module already declares them
+endv
+
+*** Dialect with XOR and MQTT
+omod MAIN-STRING is
+    protecting CONVERSION .
+    protecting DIALECT{lalingo{xor+lstring}, MqttProtocol{Byte}} * (sort BitVec{8} to Byte) .
+
+    var N : Nat .
+    *** Definition of the parameter (mod 256) converted to String
+    eq param(N) = string(random(N) rem (2 ^ 8), 10) . 
+endom
+
+*** DIALECT(XOR,MQTT) for two clients (c1 & c2) and one broker (b)
+frew    newDialect(newMqttClient('c1,'b,subscribe("temp"))) 
+        newDialect(newMqttBroker('b)) 
+        newDialect(newMqttClient('c2,'b,publish("temp","34"))) .

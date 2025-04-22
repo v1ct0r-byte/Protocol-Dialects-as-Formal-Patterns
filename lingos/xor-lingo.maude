@@ -1,0 +1,121 @@
+*** Specification of the XOR lingo
+
+sload ../data-types
+
+*** Interface for XOR operation
+fth XOR-TH is
+    sort Elt .
+
+    op zero : -> Elt .
+    op _xor_ : Elt Elt -> Elt [assoc comm] .
+
+    var N : Elt .
+    
+    eq N xor N = zero .
+    eq N xor zero = N .
+endfth
+
+*** Functional module implementing XOR over some trivial data-type
+fmod XOR{D :: TRIV} is
+    op zero : -> D$Elt .
+    op _xor_ : D$Elt D$Elt -> D$Elt [assoc comm] .
+
+    var N : D$Elt .
+
+    eq N xor N = zero .
+    eq zero xor N = N .
+endfm
+
+*** Functional module implementing XOR as symmetrix difference of sets over some trivial data-type
+fmod XOR-SET{D :: TRIV} is
+    sort Set .
+    subsort D$Elt < Set .
+    op zero : -> Set .
+    op _xor_ : Set Set -> Set [ctor assoc comm] .
+
+    var S : Set .
+
+    eq S xor S = zero .
+    eq zero xor S = S .
+endfm
+
+*** Functional module representing the XOR-LINGO over any trivial data type
+fmod XOR-LINGO{D :: TRIV} is
+    protecting NAT . *** Multiplicites come from Nat
+    protecting XOR{D} .
+
+    *** Function to compute the parameter for f and g
+    op param : Nat -> D$Elt .
+endfm
+
+*** XOR Lingo with Bit Vectors of a given size
+fmod XOR-LINGO-BV{N :: NzNATn} is
+    protecting BIT-VEC{N} .
+    protecting RANDOM .
+
+    vars X Y : BitVec{N} .
+
+    op f : BitVec{N} BitVec{N} -> BitVec{N} .
+    eq f(X,Y) = X xor Y .
+    op g : BitVec{N} BitVec{N} -> BitVec{N} .
+    eq g(X,Y) = X xor Y .
+
+    ops ingressArity egressArity : -> NzNat .
+    eq ingressArity = 1 .
+    eq egressArity = 1 .
+
+    var Z : Nat .
+
+    op param : Nat -> BitVec{N} .
+    eq param(Z) = [random(Z) rem (2 ^ N$n)] .
+endfm
+
+fmod XOR'-LINGO{N :: NzNATn} is
+    protecting RANDOM .
+    protecting XOR{NatN{N}} .
+
+    vars X Y : NatN{N} .
+
+    ops ingressArity egressArity : -> Nat .
+
+    eq ingressArity = 1 .
+    eq egressArity = 1 .
+
+    op f : NatN{N} NatN{N} -> NatN{N} .
+    eq f(X, Y) = X xor Y .
+    op g : NatN{N} NatN{N} -> NatN{N} .
+    eq g(X, Y) = X xor Y .
+
+    *** Function to compute the parameter for f and g
+    op param : Nat -> NatN{N} .
+    eq param(N:Nat) = [random(N:Nat) rem (N$n * 10)] .
+endfm
+
+*** Error detecting version of XOR
+fmod XOR-ED-LINGO{D :: TRIV} is
+    protecting XOR{D} .
+    protecting PAIR{D,D} .
+    protecting NAT .
+
+    vars N1 N2 M1 M2 : D$Elt .
+
+    op bottom : -> D$Elt .
+
+    ops ingressArity egressArity : -> NzNat .
+
+    eq ingressArity = 1 .
+    eq egressArity = 1 .
+
+    op f : D$Elt Pair{D,D} -> Pair{D,D} .
+    eq f(N1, [M1,M2]) = [N1 xor M1, N1 xor M2] .
+    op g : Pair{D,D} Pair{D,D} ~> D$Elt .
+    eq g([N1,N2], [M1,M2]) = (if (N1 xor M1 == N2 xor M2) then N1 xor M1 else bottom fi) .
+
+    *** Function to compute the parameter for f and g
+    op param : Nat -> Pair{D,D} .
+endfm
+
+*** Main module to test
+fmod MAIN is
+    protecting XOR-LINGO-BV{8} * (sort BitVec{8} to Byte) .
+endfm

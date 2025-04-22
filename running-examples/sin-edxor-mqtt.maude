@@ -1,0 +1,49 @@
+*** Example of Dialect with error-detecting version of XOR over MQTT
+
+sload ../modf-static
+sload ../protocols/mqtt
+sload ../lingos/xor-lingo
+
+*** XOR-ED-LINGO
+fmod XOR-ED-LINGO-I{D :: TRIV} is
+    protecting XOR-ED-LINGO{D} .
+endfm
+
+*** View to instantiate XOR over a trivial data type as a lingo
+view xor-ed-lingo{D :: TRIV} from PMLINGO to XOR-ED-LINGO-I{D} is
+    sort D1 to D$Elt .
+    sort D2 to Pair{D,D} .
+    sort A to Pair{D,D} .
+
+    *** f & g are already set by the target module so the identity map is applied
+
+    *** param is already declared by the lingo
+endv
+
+*** Dialect with EDXOR and MQTT over Byte
+omod MAIN-BYTE is
+    protecting DIALECT{xor-ed-lingo{Byte}, MqttProtocol{Byte}} * (sort BitVec{8} to Byte) .
+
+    var N : Nat .
+    *** Definition of the parameter (a pair consisting of one number and its successor mod 256)
+    eq param(N) = [[(random(N) rem (2 ^ 8))], [(random(s(N)) rem (2 ^ 8))]] .
+endom
+
+*** DIALECT(ED-XOR, MQTT) for two clients (c1 & c2) and one broker (b)
+frew    newDialect(newMqttClient('c1, 'b, subscribe("temp"))) 
+        newDialect(newMqttBroker('b)) 
+        newDialect(newMqttClient('c2, 'b, publish("temp", "34"))) .
+
+omod MAIN-STRING is
+    protecting CONVERSION .
+    protecting DIALECT{xor-ed-lingo{String}, MqttProtocol{String}} .
+
+    var N : Nat .
+    *** Definition of the parameter (a pair of random numbers as Strings)
+    eq param(N) = [string(random(N), 10), string(random(s(N)), 10)] .
+endom
+
+*** DIALECT(ED-XOR, MQTT) for two clients (c1 & c2) and one broker (b)
+frew    newDialect(newMqttClient('c1, 'b, subscribe("temp"))) 
+        newDialect(newMqttBroker('b)) 
+        newDialect(newMqttClient('c2, 'b, publish("temp", "34"))) .

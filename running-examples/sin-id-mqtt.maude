@@ -1,0 +1,49 @@
+*** Example of Dialect with Identity lingo over MQTT
+
+sload ../modf-static
+sload ../protocols/mqtt
+sload ../lingos/identity-lingo
+
+*** IDENTITY-LINGO
+fmod IDENTITY-LINGO-I{D :: TRIV} is
+    protecting NAT .
+    protecting IDENTITY-LINGO{D} .
+endfm
+
+*** View to instantiate IDENTITY over a trivial data-type as a Lingo
+view identity-lingo{D :: TRIV} from PMLINGO to IDENTITY-LINGO-I{D} is
+    sort D1 to D$Elt .
+    sort D2 to D$Elt .
+    sort A to D$Elt .
+    
+    *** f and g are declared by the lingo
+
+    *** param is declared by the lingo
+endv
+
+*** Dialect with IDENTITY and MQTT over Byte (i.e. BitVec{8})
+omod MAIN-BYTE is
+    protecting DIALECT{identity-lingo{Byte}, MqttProtocol{Byte}} * (sort BitVec{8} to Byte) .
+
+    var N : Nat .
+    *** Definition of the parameter (return 0 allways)
+    eq param(N) = [0] .
+endom
+
+frew    newDialect(newMqttClient('c1,'b,subscribe("temp"))) 
+        newDialect(newMqttBroker('b)) 
+        newDialect(newMqttClient('c2,'b,publish("temp","34"))) .
+
+*** Dialect with IDENTITY and MQTT over Strings
+omod MAIN-STRING is
+    protecting CONVERSION .
+    protecting DIALECT{identity-lingo{String}, MqttProtocol{String}} .
+
+    var N : Nat .
+    *** Definition of the parameter (return emtpy string allways)
+    eq param(N) = "" .
+endom
+
+frew    newDialect(newMqttClient('c1,'b,subscribe("temp"))) 
+        newDialect(newMqttBroker('b)) 
+        newDialect(newMqttClient('c2,'b,publish("temp","34"))) .

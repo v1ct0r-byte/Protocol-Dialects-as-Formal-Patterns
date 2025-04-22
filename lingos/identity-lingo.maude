@@ -1,0 +1,56 @@
+*** Specification of the Identity lingo
+
+*** This theory requires that the set only has one element, the star, and the equation makes it that any element is the star
+fth ONE is
+    sort Elt .
+    op * : -> Elt .
+    eq X:Elt = * .
+endfth
+
+*** Theory to include restrictions to the LINGO theory on the argument sort
+fth LINGO-UNPARAMETRIC is
+    including LINGO .
+    
+    eq f(X:D1, a:A) = f(X:D1, b:A) [nonexec] .
+    eq g(X:D2, a:A) = g(X:D2, b:A) [nonexec] .
+endfth
+
+*** The true theory of an identity lingo where the f and g just disappear
+fth IDENTITY-LINGO-TH is
+    *** We rename sort D2 to D1 because it is the same in the identity lingo
+    including LINGO-UNPARAMETRIC * (sort D2 to D1) .
+
+    eq f(X:D1, a:A) = X:D1 .
+    eq g(X:D1, a:A) = X:D1 .
+endfth
+
+*** Identity lingo over NatN{N}
+fmod IDENTITY-LINGO-NATN{N :: NzNATn} is
+    protecting NATN{N} .
+
+    vars N M : NatN{N} .
+
+    op f : NatN{N} NatN{N} -> NatN{N} . 
+    eq f(N, M) = N .
+    op g : NatN{N} NatN{N} -> NatN{N} .
+    eq g(N, M) = N .
+endfm
+
+*** Identity lingo over some data-type
+fmod IDENTITY-LINGO{D :: TRIV} is
+    protecting NAT .
+    vars N M : D$Elt .
+
+    ops ingressArity egressArity : -> NzNat .
+
+    eq ingressArity = 1 .
+    eq egressArity = 1 .
+
+    op f : D$Elt D$Elt -> D$Elt . 
+    eq f(N, M) = N .
+    op g : D$Elt D$Elt -> D$Elt .
+    eq g(N, M) = N .
+
+    *** Function to compute the parameter for f and g
+    op param : Nat -> D$Elt .
+endfm
